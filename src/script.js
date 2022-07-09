@@ -2,7 +2,8 @@ import "./style.css"
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import * as dat from "dat.gui"
-
+import particleVertexShader from "./shaders/particle/vertex.glsl"
+import particleFragmentShader from "./shaders/particle/fragment.glsl"
 /**
  * Base
  */
@@ -15,18 +16,32 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
+// Mouse
+const mouse = new THREE.Vector2()
+
 /**
  * Geometry
  */
-const geometry = new THREE.PlaneBufferGeometry(5, 5, 5)
+const geometry = new THREE.PlaneBufferGeometry(17, 17, 128, 128)
 
 /**
  * Materials
  */
-const materials = new THREE.MeshBasicMaterial({})
+const materials = new THREE.ShaderMaterial({
+  vertexShader: particleVertexShader,
+  fragmentShader: particleFragmentShader,
 
-const mesh = new THREE.Mesh(geometry, materials)
-scene.add(mesh)
+  uniforms: {
+    uTime: { value: 0 },
+    uMouse: { value: mouse },
+    uPoints: { value: new THREE.Vector2() },
+  },
+
+  // wireframe: true,
+})
+
+const mesh = new THREE.Points(geometry, materials)
+// scene.add(mesh)
 
 /**
  * Raycaster
@@ -58,8 +73,6 @@ window.addEventListener("resize", () => {
 /**
  * Mouse
  */
-const mouse = new THREE.Vector2()
-
 window.addEventListener("mousemove", (event) => {
   mouse.x = (event.clientX / sizes.width) * 2 - 1
   mouse.y = -(event.clientY / sizes.height) * 2 + 1
@@ -104,7 +117,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Red dot
  */
-const dotGeometry = new THREE.PlaneBufferGeometry(1, 1, 1)
+const dotGeometry = new THREE.CircleBufferGeometry(1, 128)
 
 /**
  * Materials
@@ -113,7 +126,7 @@ const dotMaterials = new THREE.MeshBasicMaterial({
   color: "#ff0",
 })
 
-const dotMesh = new THREE.Mesh(dotGeometry, dotMaterials)
+const dotMesh = new THREE.Points(dotGeometry, materials)
 scene.add(dotMesh)
 
 /**
@@ -132,7 +145,15 @@ const tick = () => {
 
   if (intersects.length > 0) {
     dotMesh.position.set(intersects[0].point.x, intersects[0].point.y, 2)
+
+    materials.uniforms.uPoints.value = new THREE.Vector2(
+      intersects[0].point.x,
+      intersects[0].point.y
+    )
   }
+
+  // Update materials
+  materials.uniforms.uTime.value = elapsedTime
 
   // Update controls
   controls.update()
